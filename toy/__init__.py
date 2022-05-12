@@ -1,5 +1,5 @@
 import tensorflow as tf
 
 ##DATALOADER 
-from toyproblems.losses import *
+from toy.losses import *
 
