@@ -266,6 +266,9 @@ def map_label_to_class_from_path(df_PATH, keycol, valcol, convert_key_to_int =Tr
 
 
 def get_key_for_class2distance(TrueClass, PredClass):
+
+    TrueClass = tf.strings.as_string(TrueClass)
+    PredClass = tf.strings.as_string(PredClass)
     out = tf.strings.reduce_join(
 				axis = -1,
 				inputs = tf.stack([TrueClass, PredClass], axis = 1),
@@ -274,18 +277,17 @@ def get_key_for_class2distance(TrueClass, PredClass):
     return out
 
 
-def backend_categorical_crossentropy(target, output, map_genus_to_distance, map_label_to_genus, weight_range, from_logits=False, axis=-1):
+def backend_categorical_crossentropy(target, output, map_label_to_distance, weight_range, from_logits=False, axis=-1):
   
       target = tf.convert_to_tensor(target)
       output = tf.convert_to_tensor(output)
       target.shape.assert_is_compatible_with(output.shape)
-      l2g = map_label_to_genus
-      g2d = map_genus_to_distance
+      l2d = map_label_to_distance
       target_labels = tf.argmax(target, axis = 1, output_type = tf.int32)
       output_labels = tf.argmax(output, axis = 1, output_type = tf.int32)
-      pdist_weight = g2d[
-                         get_key_for_g2d(l2g[target_labels],
-                                          l2g[output_labels])
+      pdist_weight = l2d[
+                         get_key_for_class2distance(target_labels,
+                                          output_labels)
                         ]
       pdist_weight = expand_weight_range(pdist_weight, weight_range)
 
@@ -322,8 +324,7 @@ def backend_categorical_crossentropy(target, output, map_genus_to_distance, map_
 
 def pd_categorical_crossentropy(y_true,
                              y_pred,
-                             map_genus_to_distance,
-                             map_label_to_genus,
+                             map_label_to_distance,
                              weight_range,
                              from_logits=False,
                              label_smoothing=0.,
@@ -341,7 +342,7 @@ def pd_categorical_crossentropy(y_true,
                                  lambda: y_true)
 
   return backend_categorical_crossentropy(
-      y_true, y_pred, map_genus_to_distance, map_label_to_genus, weight_range, from_logits=from_logits, axis=axis)
+      y_true, y_pred, map_label_to_distance, weight_range, from_logits=from_logits, axis=axis)
 
 
 class PatristicDistanceCrossentropy(LossFunctionWrapper):
@@ -352,8 +353,7 @@ class PatristicDistanceCrossentropy(LossFunctionWrapper):
 
   """
   def __init__(self,
-               map_genus_to_distance,
-               map_label_to_genus,
+               map_label_to_distance,
                weight_range:list,
                from_logits=False,
                label_smoothing:float = 0.,
@@ -364,8 +364,7 @@ class PatristicDistanceCrossentropy(LossFunctionWrapper):
     super().__init__(
         pd_categorical_crossentropy,
         name=name,
-        map_genus_to_distance = map_genus_to_distance,
-        map_label_to_genus = map_label_to_genus,
+        map_label_to_distance = map_label_to_distance,
         weight_range = weight_range,
         reduction=reduction,
         from_logits=from_logits,
