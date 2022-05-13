@@ -266,9 +266,10 @@ def map_label_to_class_from_path(df_PATH, keycol, valcol, convert_key_to_int =Tr
 
 
 def get_key_for_class2distance(TrueClass, PredClass):
-
-    TrueClass = tf.strings.as_string(TrueClass)
-    PredClass = tf.strings.as_string(PredClass)
+    if TrueClass.dtype is not tf.string:
+      TrueClass = tf.strings.as_string(TrueClass)
+    if PredClass.dtype is not tf.string:
+      PredClass = tf.strings.as_string(PredClass)
     out = tf.strings.reduce_join(
 				axis = -1,
 				inputs = tf.stack([TrueClass, PredClass], axis = 1),
@@ -277,8 +278,10 @@ def get_key_for_class2distance(TrueClass, PredClass):
     return out
 
 def get_distance_from_two_classes(TrueClass, PredClass, LOOKUPTB):
-    TrueClass = tf.strings.as_string(TrueClass)
-    PredClass = tf.strings.as_string(PredClass)
+    if TrueClass.dtype is not tf.string:
+      TrueClass = tf.strings.as_string(TrueClass)
+    if PredClass.dtype is not tf.string:
+      PredClass = tf.strings.as_string(PredClass)
     return tf.math.maximum(
 			LOOKUPTB.lookup(tf.strings.reduce_join(
 				axis = -1,
