@@ -225,7 +225,7 @@ def get_class2distance(DistanceFilename):
 			tf.constant(list(distance.keys()), dtype = tf.string), 
 			tf.constant(list(distance.values()), dtype = tf.float32)
 			),
-		default_value = 0.0
+		default_value = -1
 		)
 	return class2distance
 
@@ -276,19 +276,34 @@ def get_key_for_class2distance(TrueClass, PredClass):
 			  )
     return out
 
+def get_distance_from_two_classes(TrueClass, PredClass, LOOKUPTB):
+    TrueClass = tf.strings.as_string(TrueClass)
+    PredClass = tf.strings.as_string(PredClass)
+    return tf.math.maximum(
+			LOOKUPTB.lookup(tf.strings.reduce_join(
+				axis = -1,
+				inputs = tf.stack([TrueClass, PredClass], axis = 1),
+				separator = ' <=> '
+			)),
+			LOOKUPTB.lookup(tf.strings.reduce_join(
+				axis = -1,
+				inputs = tf.stack([PredClass, TrueClass], axis = 1),
+				separator = ' <=> '
+			))
+      )
+
 
 def backend_categorical_crossentropy(target, output, map_label_to_distance, weight_range, from_logits=False, axis=-1):
   
       target = tf.convert_to_tensor(target)
       output = tf.convert_to_tensor(output)
       target.shape.assert_is_compatible_with(output.shape)
-      l2d = map_label_to_distance
       target_labels = tf.argmax(target, axis = 1, output_type = tf.int32)
       output_labels = tf.argmax(output, axis = 1, output_type = tf.int32)
-      pdist_weight = l2d[
-                         get_key_for_class2distance(target_labels,
-                                          output_labels)
-                        ]
+      pdist_weight = get_distance_from_two_classes(
+          TrueClass = target_labels,
+          PredClass = output_labels, 
+          LOOKUPTB = map_label_to_distance)
       pdist_weight = expand_weight_range(pdist_weight, weight_range)
 
       if hasattr(output, '_keras_logits'):
